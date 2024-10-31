@@ -1,0 +1,75 @@
+name: Docker Build and Push Microservices
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      services:
+        description: 'Services to build (comma-separated)'
+        required: false
+        type: string
+
+env:
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        include:
+          - service_name: "auth-api"
+            service_context: "./auth-api"
+            service_dockerfile: "./auth-api/Dockerfile"
+          
+          - service_name: "frontend"
+            service_context: "./frontend"
+            service_dockerfile: "./frontend/Dockerfile"
+          
+          - service_name: "log-message-processor"
+            service_context: "./log-message-processor"
+            service_dockerfile: "./log-message-processor/Dockerfile"
+
+          - service_name: "todos-api"
+            service_context: "./todos-api"
+            service_dockerfile: "./todos-api/Dockerfile"
+
+          - service_name: "users-api"
+            service_context: "./users-api"
+            service_dockerfile: "./users-api/Dockerfile"
+
+    # Conditional step to filter services when manually dispatched
+    if: >
+        github.event_name == 'push' || 
+        (github.event_name == 'workflow_dispatch' && 
+        contains(fromJson(format('["{0}"]', inputs.services)), matrix.service_name))
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ${{ matrix.service_context }}
+        file: ${{ matrix.service_dockerfile }}
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: |
+          ${{ env.DOCKERHUB_USERNAME }}/${{ matrix.service_name }}:latest
+          ${{ env.DOCKERHUB_USERNAME }}/${{ matrix.service_name }}:${{ github.sha }}
+
+    - name: Image digest
+      run: echo ${{ steps.docker_build.outputs.digest }}
