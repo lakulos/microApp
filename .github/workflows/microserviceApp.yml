@@ -16,7 +16,6 @@ env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
 
 jobs:
-
   determine-services:
     runs-on: ubuntu-latest
     outputs:
@@ -38,10 +37,10 @@ jobs:
             echo "should-run=false" >> $GITHUB_OUTPUT
           fi
 
-
   build-and-push:
+    needs: determine-services
+    if: needs.determine-services.outputs.should-run == 'true'
     runs-on: ubuntu-latest
-    
     strategy:
       matrix:
         include:
