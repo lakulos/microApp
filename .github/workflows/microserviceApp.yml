@@ -16,6 +16,29 @@ env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
 
 jobs:
+
+  determine-services:
+    runs-on: ubuntu-latest
+    outputs:
+      should-run: ${{ steps.check.outputs.should-run }}
+    steps:
+      - id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "should-run=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            SERVICES="${{ inputs.services }}"
+            CURRENT_SERVICE="${{ matrix.service_name }}"
+            if [[ ",${SERVICES}," == *",${CURRENT_SERVICE},"* ]]; then
+              echo "should-run=true" >> $GITHUB_OUTPUT
+            else
+              echo "should-run=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "should-run=false" >> $GITHUB_OUTPUT
+          fi
+
+
   build-and-push:
     runs-on: ubuntu-latest
     
