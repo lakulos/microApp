@@ -33,20 +33,14 @@ jobs:
           - service_name: "log-message-processor"
             service_context: "./log-message-processor"
             service_dockerfile: "./log-message-processor/Dockerfile"
-
+          
           - service_name: "todos-api"
             service_context: "./todos-api"
             service_dockerfile: "./todos-api/Dockerfile"
-
+          
           - service_name: "users-api"
             service_context: "./users-api"
             service_dockerfile: "./users-api/Dockerfile"
-
-    # Conditional step to filter services when manually dispatched
-    if: >
-        github.event_name == 'push' || 
-        (github.event_name == 'workflow_dispatch' && 
-        contains(fromJson(format('["{0}"]', inputs.services)), matrix.service_name))
 
     steps:
     - name: Checkout code
@@ -70,6 +64,3 @@ jobs:
         tags: |
           ${{ env.DOCKERHUB_USERNAME }}/${{ matrix.service_name }}:latest
           ${{ env.DOCKERHUB_USERNAME }}/${{ matrix.service_name }}:${{ github.sha }}
-
-    - name: Image digest
-      run: echo ${{ steps.docker_build.outputs.digest }}
